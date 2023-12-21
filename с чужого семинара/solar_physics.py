@@ -86,7 +86,7 @@ class Planet():
     """Изображение планеты"""
 
 
-def calculate_force(body, space_objects):
+def calculate_force(body, space_objects, W):
     """Вычисляет силу, действующую на тело.
 
     Параметры:
@@ -96,10 +96,20 @@ def calculate_force(body, space_objects):
     **space_objects** — список объектов, которые воздействуют на тело.
     """
 
+    sf = 4.8e-08
     body.Fx = body.Fy = 0
     for obj in space_objects:
         if ((body.x - obj.x)**2 + (body.y - obj.y)**2) == 0:
             continue
+        if ((sf * body.x - sf * obj.x)**2 + (sf * body.y - sf * obj.y)**2)**0.5 > 0.95*(body.R + obj.R) and((sf * body.x - sf * obj.x)**2 + (sf * body.y - sf * obj.y)**2)**0.5 <= (body.R + obj.R) and body.m != 0:
+            center_m = body.m + obj.m
+            center_x = (body.x * body.m + obj.x * obj.m)/center_m
+            center_y = (body.y * body.m + obj.y * obj.m)/center_m
+            rc_x = body.x - center_x
+            rc_y = body.y - center_y
+            body.Fx += body.m * W**2 * rc_x
+            body.Fy += body.m * W**2 * rc_y
+            """Вычисляет центробежную силу."""
         r = ((body.x - obj.x)**2 + (body.y - obj.y)**2)**0.5
         body.Fx += gravitational_constant * body.m * obj.m / r**3 * (obj.x - body.x)
         body.Fy += gravitational_constant * body.m * obj.m / r**3 * (obj.y - body.y)
@@ -120,9 +130,9 @@ def move_space_object(body, dt, space_objects, W):
         ay = body.Fy / body.m
         body.y += body.Vy * dt + ay * dt**2 / 2
         body.Vy += ay * dt
-            
+    """Проверяет слипшиеся тела и вращает их с заданной угловой скоростью"""
     for obj in space_objects:
-        if obj == body:
+        if obj == body or obj.m == 0:
             continue
         elif ((sf * body.x - sf * obj.x)**2 + (sf * body.y - sf * obj.y)**2)**0.5 > (body.R + obj.R):
             continue
@@ -134,10 +144,11 @@ def move_space_object(body, dt, space_objects, W):
                 body.y = obj.y + y1 / abs(y1) * (body.R+obj.R)/(1 + x1**2/y1**2)**0.5/(sf)
             elif (x1 != 0):
                 body.x = obj.x + x1 / abs(x1) * (body.R+obj.R)/(sf)
+                body.y = obj.y
             else:
                 body.y = obj.y + y1 / abs(y1) * (body.R+obj.R)/(sf)
+                body.x = obj.x
         elif obj.m != 0:
-            
             center_m = body.m + obj.m
             center_x = (body.x * body.m + obj.x * obj.m)/center_m
             center_y = (body.y * body.m + obj.y * obj.m)/center_m
@@ -175,7 +186,7 @@ def recalculate_space_objects_positions(space_objects, dt, W):
     """
 
     for body in space_objects:
-        calculate_force(body, space_objects)
+        calculate_force(body, space_objects, W)
     for body in space_objects:
         move_space_object(body, dt, space_objects, W)
 
